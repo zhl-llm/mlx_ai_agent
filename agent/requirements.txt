@@ -1,0 +1,23 @@
+langchain
+langchain-core
+langchain-community
+langgraph
+langchain-text-splitters
+
+chromadb
+sentence-transformers
+
+# Local environment & CLI execution
+python-dotenv>=1.0.0
+rich>=13.5.0
+python-multipart>=0.0.6
+
+# Optional / helpers
+requests>=2.32.0
+aiohttp>=3.9.3
+asyncio
+beautifulsoup4>=4.12.2
+
+langchain_google_genai
+Flask>=2.0.0
+
