@@ -21,3 +21,5 @@ beautifulsoup4>=4.12.2
 langchain_google_genai
 Flask>=2.0.0
 
+tavily-python
+serpapi

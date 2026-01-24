@@ -81,5 +81,6 @@ curl -N -X POST http://localhost:8000/chat/stream \
 cd agent
 pip install -r requirements.txt
 export TAVILY_API_KEY=tvly-dev-******
+export SERP_API_KEY=************
 python main.py
 ```
