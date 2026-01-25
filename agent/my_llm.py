@@ -8,7 +8,7 @@ from langchain_core.outputs import ChatResult, ChatGeneration
 # ---------------------------
 # Request helper
 # ---------------------------
-def mychatllm_calling(messages: List[dict], max_tokens: int = 1024) -> str:
+def mychatllm_calling(messages: List[dict], max_tokens: int = 512) -> str:
     """
     Sends conversation messages to the FastAPI LLM server and returns text.
     """

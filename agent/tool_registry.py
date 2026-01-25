@@ -1,11 +1,12 @@
 from langchain_core.tools import tool
 from tools.local_rag import local_rag
-from tools.web_search import tavily_search
+from tools.web_search import tavily_search, baidu_search
 from tools.date_tool import get_current_date
 
 _all_tools = [
-    tavily_search,
     get_current_date,
+    tavily_search,
+    baidu_search,
 ]
 
 @tool

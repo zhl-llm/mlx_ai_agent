@@ -22,4 +22,5 @@ langchain_google_genai
 Flask>=2.0.0
 
 tavily-python
-serpapi
+google-search-results
+

@@ -30,4 +30,4 @@ VECTORSTORE_PERSIST_DIR = os.getenv("VECTORSTORE_PERSIST_DIR", "./chroma_store")
 # API Keys
 # -----------------------
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
-
+SERP_API_KEY = os.getenv("SERP_API_KEY")
