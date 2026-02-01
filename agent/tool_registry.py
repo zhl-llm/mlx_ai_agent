@@ -6,7 +6,7 @@ from tools.date_tool import get_current_date
 _all_tools = [
     get_current_date,
     tavily_search,
-    baidu_search,
+    # baidu_search,
 ]
 
 @tool

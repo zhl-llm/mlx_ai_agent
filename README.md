@@ -33,17 +33,17 @@ modelscope download --model Qwen/Qwen-14B-Chat
 python -m mlx_lm server --model /Users/zhlsunshine/Projects/inference/models/qwen2.5-14b-instruct-bits-8 --port 8080
 ```
 
-### Start the LLM server with UI server
+### Start the LLM server
 
 ```sh
 # set the limitation of united memory to 26GBi (26 * 1024 = 26624)
 # will be default once the mac restart
 sudo sysctl iogpu.wired_limit_mb=28672
 pip install fastapi uvicorn mlx-lm
-uvicorn app:app --host 0.0.0.0 --port 8000
+uvicorn app_llm:app --host 0.0.0.0 --port 8000
 ```
 
-Valid the app service without stream response:
+#### Valid the app service without stream response:
 
 ```sh
 curl -X POST http://localhost:8000/chat \
@@ -59,7 +59,7 @@ curl -X POST http://localhost:8000/chat \
 }'
 ```
 
-Valid the app service with stream response:
+#### Valid the app service with stream response:
 
 ```sh
 curl -N -X POST http://localhost:8000/chat/stream \
@@ -73,6 +73,36 @@ curl -N -X POST http://localhost:8000/chat/stream \
     ],
     "max_tokens": 512
 }'
+```
+
+## Start the Embedding server
+
+### Convert the embedding model
+
+```sh
+python -m mlx_lm.convert \
+  --hf-path /Users/zhlsunshine/Projects/inference/models/chatmodels/qwen3-embedding-4b \
+  --mlx-path /Users/zhlsunshine/Projects/inference/models/chatmodels/qwen3-embedding-4b-mlx \
+  --dtype float16
+```
+
+```sh
+sudo sysctl iogpu.wired_limit_mb=28672
+pip install fastapi uvicorn mlx-lm
+uvicorn app_embedding:app --host 0.0.0.0 --port 6000
+```
+
+#### Valid the app service
+
+```sh
+curl http://localhost:6000/health
+
+curl http://localhost:6000/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": ["Hello world", "Mac mini M4 is fast"]
+  }'
+
 ```
 
 ## Start Client to LLM Server
