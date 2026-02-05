@@ -23,6 +23,7 @@ EMBEDDINGS_MODEL = os.getenv("EMBEDDINGS_MODEL", "text-embedding-3-small")
 # -----------------------
 # Vectorstore Configuration
 # -----------------------
+RAG_DATA_SOURCE = os.getenv("RAG_DATA_SOURCE", "source_data")
 VECTORSTORE_TYPE = os.getenv("VECTORSTORE_TYPE", "chroma")
 VECTORSTORE_PERSIST_DIR = os.getenv("VECTORSTORE_PERSIST_DIR", "./chroma_store")
 
@@ -31,3 +32,5 @@ VECTORSTORE_PERSIST_DIR = os.getenv("VECTORSTORE_PERSIST_DIR", "./chroma_store")
 # -----------------------
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 SERP_API_KEY = os.getenv("SERP_API_KEY")
+
+MAX_CHUNKS = os.getenv("MAX_CHUNKS", 30)

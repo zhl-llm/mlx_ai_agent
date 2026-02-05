@@ -7,7 +7,7 @@ class MyCustomEmbeddings(Embeddings):
     def __init__(
         self,
         endpoint: str = "http://localhost:6000/v1/embeddings",
-        timeout: int = 60,
+        timeout: int = 180,
     ):
         self.endpoint = endpoint
         self.timeout = timeout

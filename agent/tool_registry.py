@@ -1,3 +1,4 @@
+import settings
 from langchain_core.tools import tool
 from tools.local_rag import local_rag
 from tools.web_search import tavily_search, baidu_search
@@ -10,7 +11,7 @@ _all_tools = [
 ]
 
 @tool
-def build_rag_index(docs_dir: str) -> str:
+def build_rag_index(docs_dir: str=settings.RAG_DATA_SOURCE) -> str:
     """Builds a local RAG index from a directory of text files."""
     return local_rag.build_index(docs_dir)
 
