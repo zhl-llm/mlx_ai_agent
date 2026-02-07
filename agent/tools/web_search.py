@@ -7,13 +7,13 @@ from langchain_core.tools import tool
 
 # https://www.tavily.com/
 @tool
-def tavily_search(query: str, max_results: int = 3) -> str:
+def tavily_search(query: str, max_results: int = 1) -> str:
     """
     Search the web using Tavily API and return a summarized answer.
 
     Args:
         query (str): The search query.
-        max_results (int, optional): The number of search results to consider for the summary. Defaults to 3.
+        max_results (int, optional): The number of search results to consider for the summary. Defaults to 1.
 
     Returns:
         str: A summarized answer based on the search results.
@@ -26,7 +26,7 @@ def tavily_search(query: str, max_results: int = 3) -> str:
     response = client.search(
         query=query,
         search_depth="advanced", # advanced|basic|fast|ultra-fast
-        max_results=3
+        max_results=max_results
     )
     # print("=== [DEBUG] tavily_search response ===")
     # print(response)

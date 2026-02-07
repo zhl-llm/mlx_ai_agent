@@ -80,9 +80,9 @@ class LocalRAG:
                 browser.close()
         except Exception as e:
             print(f"WARN: Playwright failed to load {url}: {e}")
-            return ""
+            return f"[ERROR] Failed to load URL: {url}. Reason: {e}"
         if not html:
-            return ""
+            return f"[ERROR] Failed to load URL: {url}. Reason: not html"
         # ---- HTML CLEANING ----
         soup = BeautifulSoup(html, "html.parser")
         for tag in soup(["script", "style", "noscript", "header", "footer", "nav"]):
@@ -94,13 +94,13 @@ class LocalRAG:
             if len(tag.get_text(strip=True)) > 50
         ]
         if not texts:
-            return ""
+            return f"[ERROR] Failed to load URL: {url}. Reason: not texts"
         docs = [Document(page_content="\n".join(texts), metadata={"source": url})]
         # ---- SPLITTING ----
         splitter = self.text_splitter()
         chunks = splitter.split_documents(docs)
         if not chunks:
-            return ""
+            return f"[ERROR] Failed to load URL: {url}. Reason: not chunks"
         # ---- VECTOR SEARCH ----
         vectorstore = Chroma.from_documents(chunks[:settings.MAX_CHUNKS], self.embeddings)
         results = vectorstore.max_marginal_relevance_search(query, k=k)

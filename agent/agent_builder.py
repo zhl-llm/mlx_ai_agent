@@ -27,9 +27,20 @@ Decide the next step.
 {format_instructions}
 
 Rules:
-- If you need a tool, set action to the tool name and fill args
-- If you are done, set action to "Final Answer" and provide final_answer
-- Do NOT include explanations or markdown
+1. Decide whether a tool is required.
+   - If yes, set "action" to the tool name and provide "args".
+   - If no, set "action" to "Final Answer" and provide "final_answer".
+
+2. Web Search & URL Handling:
+   - If web search returns one or more URLs, you MUST:
+     a. Fetch the content of each URL.
+     b. Analyze the fetched content before answering.
+   - Each URL must be fetched and analyzed at most once.
+   - Do NOT duplicate analysis for the same URL.
+
+3. When answering:
+   - Base conclusions only on fetched and analyzed content when URLs are involved.
+   - Reuse previous analysis instead of re-fetching URLs.
 
 User question:
 {question}

@@ -7,3 +7,5 @@ python main.py "请根据https://news.sina.com.cn/ 整理出今天的新闻热�
 python main.py "请根据https://finance.sina.com.cn/的信息总结一下近期中国股市的情况"
 
 python main.py "请根据 https://www.caijing.com.cn/ 内容信息，总结一下近期中国股市的情况及其未来趋势"
+
+python main.py "请结合主流财经网站上的信息，分析并总结当前中国经济的实际情况。"
