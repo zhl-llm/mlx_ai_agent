@@ -33,4 +33,4 @@ VECTORSTORE_PERSIST_DIR = os.getenv("VECTORSTORE_PERSIST_DIR", "./chroma_store")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 SERP_API_KEY = os.getenv("SERP_API_KEY")
 
-MAX_CHUNKS = os.getenv("MAX_CHUNKS", 30)
+MAX_CHUNKS = os.getenv("MAX_CHUNKS", 100)

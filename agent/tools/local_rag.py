@@ -3,8 +3,12 @@ import settings
 from my_llm import MyChatLLM
 from my_embedding import MyCustomEmbeddings
 
+from bs4 import BeautifulSoup
 from langchain_community.embeddings import OpenAIEmbeddings
-from langchain_community.document_loaders import TextLoader, WebBaseLoader
+from langchain_community.document_loaders import TextLoader
+from playwright.sync_api import sync_playwright
+from langchain_core.documents import Document
+from langchain_core.documents import Document
 from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -60,42 +64,104 @@ class LocalRAG:
             raise NotImplementedError("Other vectorstores not implemented yet")
         return f"Indexed {len(chunks)} chunks into {self.persist_dir}"
 
+
     def query_url(self, url: str, query: str, k: int = 4):
-        """
-        Fetches content from a URL, creates a temporary vectorstore, and performs a similarity search.
-        """
         print(f"DEBUG: Querying URL '{url}' for '{query}'")
-        loader = WebBaseLoader(web_paths=[url])
-        documents = loader.load()
-
-        if not documents:
-            print(f"WARN: No documents loaded from {url}")
+        html = ""
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(
+                    headless=True,
+                    executable_path="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+                )
+                page = browser.new_page()
+                page.goto(url, timeout=20000, wait_until="networkidle")
+                html = page.content()
+                browser.close()
+        except Exception as e:
+            print(f"WARN: Playwright failed to load {url}: {e}")
             return ""
+        if not html:
+            return ""
+        # ---- HTML CLEANING ----
+        soup = BeautifulSoup(html, "html.parser")
+        for tag in soup(["script", "style", "noscript", "header", "footer", "nav"]):
+            tag.decompose()
 
+        texts = [
+            tag.get_text(strip=True)
+            for tag in soup.find_all(["h1", "h2", "h3", "p", "li"])
+            if len(tag.get_text(strip=True)) > 50
+        ]
+        if not texts:
+            return ""
+        docs = [Document(page_content="\n".join(texts), metadata={"source": url})]
+        # ---- SPLITTING ----
         splitter = self.text_splitter()
-        chunks = splitter.split_documents(documents)
+        chunks = splitter.split_documents(docs)
+        if not chunks:
+            return ""
+        # ---- VECTOR SEARCH ----
+        vectorstore = Chroma.from_documents(chunks[:settings.MAX_CHUNKS], self.embeddings)
+        results = vectorstore.max_marginal_relevance_search(query, k=k)
 
-        clean_chunks = []
-        for c in chunks:
-            if isinstance(c, tuple):
-                clean_chunks.append(c[0])
-            else:
-                clean_chunks.append(c)
+        return "\n\n---\n\n".join(r.page_content[:2000] for r in results)
 
-        # Optional: hard limit for safety
-        clean_chunks = clean_chunks[:settings.MAX_CHUNKS]
-        # Create an in-memory vectorstore for this operation
-        vectorstore = Chroma.from_documents(clean_chunks, self.embeddings)
-        docs = vectorstore.similarity_search(query, k=k)
-
-        return "\n\n---\n\n".join([d.page_content[:2000] for d in docs])
-
-    def query_index(self, query: str, k: int = 4):
+    def query_index(self, query: str, k: int = 4, expand_query: bool = True):
         print(f"DEBUG: Query Index with LocalRAG for query: {query}")
+
         if not self.vectorstore:
-            self.vectorstore = Chroma(persist_directory=self.persist_dir, embedding_function=self.embeddings)
-        docs = self.vectorstore.similarity_search(query, k=k)
-        ctx = "\n\n---\n\n".join([d.page_content[:2000] for d in docs])
+            self.vectorstore = Chroma(
+                persist_directory=self.persist_dir,
+                embedding_function=self.embeddings,
+            )
+
+        queries = [query]
+        if expand_query:
+            try:
+                expanded = self.llm.invoke(
+                    f"""Expand the search query with 3 short alternative phrasings.
+    Return one per line, no explanations.
+
+    Query: {query}
+    """
+                )
+                queries.extend(
+                    q.strip("-• ").strip()
+                    for q in expanded.content.splitlines()
+                    if len(q.strip()) > 5
+                )
+            except Exception as e:
+                print(f"WARN: Query expansion failed: {e}")
+
+        # ---- SEARCH WITH MMR ----
+        candidate_docs = []
+        for q in queries:
+            docs = self.vectorstore.max_marginal_relevance_search(
+                q,
+                k=max(k, 6),
+                fetch_k=20,
+            )
+            candidate_docs.extend(docs)
+
+        # ---- DEDUPLICATE ----
+        seen = set()
+        unique_docs = []
+        for d in candidate_docs:
+            key = d.page_content[:200]
+            if key not in seen:
+                seen.add(key)
+                unique_docs.append(d)
+        # ---- FILTER LOW-SIGNAL CHUNKS ----
+        filtered = [
+            d for d in unique_docs
+            if len(d.page_content) > 200
+        ]
+        # ---- FINAL SELECTION ----
+        final_docs = filtered[:k]
+        ctx = "\n\n---\n\n".join(
+            d.page_content[:2000] for d in final_docs
+        )
         return ctx
 
 # Singleton

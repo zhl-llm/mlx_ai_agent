@@ -6,7 +6,9 @@ langgraph
 langchain-text-splitters
 
 chromadb
+playwright
 sentence-transformers
+unstructured
 
 # Local environment & CLI execution
 python-dotenv>=1.0.0

@@ -24,7 +24,7 @@ def mychatllm_calling(messages: List[dict], max_tokens: int = 512) -> str:
         url,
         headers={
             "Content-Type": "application/json",
-            "USER_AGENT": "custom-agent 1.0"
+            "USER_AGENT": "mlx-ai-agent/0.1 (local)"
         },
         json=payload
     )

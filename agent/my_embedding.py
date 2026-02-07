@@ -17,6 +17,9 @@ class MyCustomEmbeddings(Embeddings):
 
         response = requests.post(
             self.endpoint,
+            headers={
+                "USER_AGENT": "mlx-ai-agent/0.1 (local)"
+            },
             json=payload,
             timeout=self.timeout
         )

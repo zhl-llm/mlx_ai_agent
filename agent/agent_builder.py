@@ -2,10 +2,12 @@ import datetime
 import json
 import re
 
-from typing import TypedDict, List, Optional
+from pydantic import BaseModel, Field
+from typing import Dict, Any, TypedDict, List, Optional
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import JsonOutputParser
 
 from my_llm import MyChatLLM
 from tool_registry import get_all_tools
@@ -22,24 +24,19 @@ The current date is {current_date}.
 
 Decide the next step.
 
-Respond ONLY in valid JSON using this schema:
-
-{{
-  "action": "<tool_name | Final Answer>",
-  "args": {{ ... }},
-  "final_answer": "<string | null>"
-}}
+{format_instructions}
 
 Rules:
-- If you need a tool, set "action" to the tool name and fill "args"
-- If you are done, set "action" to "Final Answer" and provide "final_answer"
-- Do NOT include explanations outside JSON
+- If you need a tool, set action to the tool name and fill args
+- If you are done, set action to "Final Answer" and provide final_answer
+- Do NOT include explanations or markdown
 
 User question:
 {question}
 
 Observation (if any):
 {observation}
+
 """
 
 # ---------------------------
@@ -50,9 +47,23 @@ class AgentState(TypedDict):
     plan: Optional[dict]
     observation: Optional[str]
 
-def extract_json(text: str) -> dict:
+class Plan(BaseModel):
+    action: str = Field(
+        description="Tool name to call, or 'Final Answer'"
+    )
+    args: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Arguments for the tool"
+    )
+    final_answer: str | None = Field(
+        default=None,
+        description="Final answer to the user, if action is Final Answer"
+    )
+
+def extract_first_json(text: str) -> dict:
     """
-    Extract the first JSON object from text.
+    Safely find the first JSON object inside text
+    and load it. Raises if no JSON found.
     """
     match = re.search(r"\{[\s\S]*\}", text)
     if not match:
@@ -79,22 +90,33 @@ def build_agent():
 
         current_date = datetime.datetime.now().strftime("%Y-%m-%d")
 
+        # Create the structured output parser
+        parser = JsonOutputParser(pydantic_object=Plan)
+
         msgs = prompt.format_messages(
             tools=tools_text,
             question=question,
             current_date=current_date,
             observation=state.get("observation"),
+            format_instructions=parser.get_format_instructions(),
         )
 
         response = llm.invoke(msgs)
-        content = response.content
+        raw = response.content
+
+        plan: dict
 
         try:
-            plan = extract_json(content)
-        except Exception as e:
-            raise ValueError(
-                f"Planner output could not be parsed.\n\nRaw output:\n{content}"
-            ) from e
+            # First try structured parser (strict)
+            plan = parser.parse(raw)
+        except Exception:
+            # Fallback: extract first JSON object manually
+            print("⚠️ Fallback JSON extraction triggered")
+            plan = extract_first_json(raw)
+
+        # Ensure plan is a dict
+        if not isinstance(plan, dict):
+            plan = plan.model_dump()  # For parsers returning Pydantic model
 
         return {
             "messages": state["messages"] + [response],
@@ -116,6 +138,8 @@ def build_agent():
         result = tool.invoke(args)
 
         obs = f"Tool {action} result:\n{result}"
+
+        print(f"=== [DEBUG] Tool observation:\n{obs}")
 
         return {
             "messages": state["messages"] + [AIMessage(content=obs)],
@@ -149,4 +173,3 @@ def build_agent():
     graph.add_edge("tool", "planner")
 
     return graph.compile()
-
