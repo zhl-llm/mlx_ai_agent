@@ -9,6 +9,7 @@ chromadb
 playwright
 sentence-transformers
 unstructured
+gradio
 
 # Local environment & CLI execution
 python-dotenv>=1.0.0
@@ -22,7 +23,6 @@ asyncio
 beautifulsoup4>=4.12.2
 
 langchain_google_genai
-Flask>=2.0.0
 
 tavily-python
 google-search-results

@@ -114,3 +114,31 @@ export TAVILY_API_KEY=tvly-dev-******
 export SERP_API_KEY=************
 python main.py
 ```
+## Start Agent Service and WebUI to LLM Server
+
+```sh
+cd agent
+pip install -r requirements.txt
+export TAVILY_API_KEY=tvly-dev-******
+export SERP_API_KEY=************
+uvicorn agent:app --host 0.0.0.0 --port 5050
+```
+
+```sh
+cd agent
+python webui.py
+```
+
+## Network Flow
+
+Browser
+  ↓
+ChatInterface
+  ↓ (message, history)
+chat_fn
+  ↓
+FastAPI /chat
+  ↓
+ReAct Agent
+  ↓
+answer

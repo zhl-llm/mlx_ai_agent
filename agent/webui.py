@@ -1,18 +1,41 @@
-from flask import Flask, render_template, request
-from main import run_agent
+import gradio as gr
+import requests
 
-app = Flask(__name__)
+API_URL = "http://localhost:5050/chat"
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+def chat_fn(message, history):
+    """
+    history: list of {"role": "...", "content": "..."}
+    """
+    agent_history = []
 
-@app.route('/query', methods=['POST'])
-def query():
-    user_query = request.form['query']
-    result = run_agent(user_query)
-    return result
+    i = 0
+    while i < len(history) - 1:
+        if history[i]["role"] == "user" and history[i + 1]["role"] == "assistant":
+            agent_history.append([
+                history[i]["content"],
+                history[i + 1]["content"]
+            ])
+            i += 2
+        else:
+            i += 1
 
-if __name__ == '__main__':
-    app.run(debug=True)
+    agent_history.append([message, ""])
 
+    resp = requests.post(
+        API_URL,
+        json={"history": agent_history},
+        timeout=300
+    )
+
+    answer = resp.json()["answer"]
+    return answer
+
+
+demo = gr.ChatInterface(
+    fn=chat_fn,
+    title="🤖 Local ReAct Agent",
+    description="Local LLM + tools + memory",
+)
+
+demo.launch(server_name="0.0.0.0", server_port=7860)

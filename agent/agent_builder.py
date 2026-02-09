@@ -139,8 +139,8 @@ def build_agent():
             plan = extract_first_json(raw)
 
         # Ensure plan is a dict
-        if not isinstance(plan, dict):
-            plan = plan.model_dump()  # For parsers returning Pydantic model
+        # if not isinstance(plan, dict):
+        #     plan = plan.model_dump()  # For parsers returning Pydantic model
 
         return {
             "messages": state["messages"] + [response],
