@@ -13,7 +13,7 @@ app = FastAPI(title="MLX LLM Server")
 # ---------------------------
 # Model loading (once)
 # ---------------------------
-MODEL_PATH = "/Users/zhlsunshine/Projects/inference/models/qwen2.5-14b-instruct-bits-8"
+MODEL_PATH = "/Users/zhlsunshine/Projects/inference/models/qwen2.5-7b-instruct"
 
 print("Loading model...")
 model, tokenizer = load(MODEL_PATH)

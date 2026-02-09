@@ -15,39 +15,52 @@ from tool_registry import get_all_tools
 # ---------------------------
 #  ReAct Prompt Template
 # ---------------------------
-PLANNER_PROMPT = """You are a planning agent.
+PLANNER_PROMPT = """You are a ReAct-style planning agent.
 
-You have access to these tools:
+Your job is to decide the NEXT action only.
+You must either:
+- call exactly ONE tool, or
+- produce the FINAL answer.
+
+You have access to the following tools:
 {tools}
 
-The current date is {current_date}.
+Current date: {current_date}
 
-Decide the next step.
+You must respond ONLY with a valid JSON object that follows the schema below.
+Do not include explanations, markdown, or extra text.
 
 {format_instructions}
 
-Rules:
-1. Decide whether a tool is required.
-   - If yes, set "action" to the tool name and provide "args".
-   - If no, set "action" to "Final Answer" and provide "final_answer".
+Decision rules:
+1. Tool usage
+   - Use a tool ONLY if it is necessary to answer the question.
+   - If a tool is required, set:
+     - "action" = the exact tool name
+     - "args" = the arguments for that tool
+     - Do NOT include "final_answer"
 
-2. Web Search & URL Handling:
-   - If web search returns one or more URLs, you MUST:
-     a. Fetch the content of each URL.
-     b. Analyze the fetched content before answering.
-   - Each URL must be fetched and analyzed at most once.
-   - Do NOT duplicate analysis for the same URL.
+2. Final answer
+   - If no tool is needed, set:
+     - "action" = "Final Answer"
+     - "final_answer" = the complete answer to the user
+     - Do NOT include "args"
 
-3. When answering:
-   - Base conclusions only on fetched and analyzed content when URLs are involved.
-   - Reuse previous analysis instead of re-fetching URLs.
+3. Web search & URLs
+   - If any tool returns URLs:
+     a. Each URL MUST be fetched exactly once.
+     b. You MUST analyze fetched content before answering.
+     c. Reuse prior observations; never re-fetch the same URL.
+
+4. Observations
+   - The "Observation" section contains results from previous tool calls.
+   - Base decisions ONLY on the user question and available observations.
 
 User question:
 {question}
 
-Observation (if any):
+Observation:
 {observation}
-
 """
 
 # ---------------------------
@@ -150,7 +163,7 @@ def build_agent():
 
         obs = f"Tool {action} result:\n{result}"
 
-        print(f"=== [DEBUG] Tool observation:\n{obs}")
+        # print(f"=== [DEBUG] Tool observation:\n{obs}")
 
         return {
             "messages": state["messages"] + [AIMessage(content=obs)],
