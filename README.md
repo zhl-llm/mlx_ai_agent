@@ -81,8 +81,8 @@ curl -N -X POST http://localhost:8000/chat/stream \
 
 ```sh
 python -m mlx_lm convert \
-  --hf-path /Users/zhlsunshine/Projects/inference/models/chatmodels/qwen3-embedding-4b \
-  --mlx-path /Users/zhlsunshine/Projects/inference/models/chatmodels/qwen3-embedding-4b-mlx \
+  --hf-path /Users/zhlsunshine/Projects/inference/models/qwen3-embedding-4b \
+  --mlx-path /Users/zhlsunshine/Projects/inference/models/qwen3-embedding-4b-mlx \
   --dtype float16
 ```
 
