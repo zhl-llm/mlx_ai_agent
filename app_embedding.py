@@ -9,7 +9,7 @@ import time
 # =========================
 # Configuration
 # =========================
-MODEL_PATH = "/Users/zhlsunshine/Projects/inference/models/chatmodels/qwen3-embedding-4b"
+MODEL_PATH = "/Users/zhlsunshine/Projects/inference/models/qwen3-embedding-4b"
 MAX_LENGTH = 512
 DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"
 
