@@ -62,7 +62,7 @@ curl -X POST http://localhost:8000/chat \
 #### Valid the app service with stream response:
 
 ```sh
-curl -N -X POST http://localhost:8000/chat/stream \
+curl --no-buffer -N -X POST http://localhost:8000/chat/stream \
   -H "Content-Type: application/json" \
   -d '{
     "messages": [
