@@ -1,5 +1,7 @@
-from langchain_core.tools import tool
 from datetime import datetime
+
+from langchain_core.tools import tool
+
 
 @tool
 def get_current_date(query: str) -> str:
@@ -12,7 +14,4 @@ def get_current_date(query: str) -> str:
     Returns:
         str: The current date in a string format.
     """
-    date_str = f"Today is {datetime.now().strftime('%A, %B %d, %Y')}."
-    # print(f"DEBUG: from get_current_date tool: {date_str}")
-    return date_str
-
+    return f"Today is {datetime.now().strftime('%A, %B %d, %Y')}."

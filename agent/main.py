@@ -1,35 +1,43 @@
+"""Command-line entry point for the MLX AI agent."""
+
+import logging
 import sys
+from collections.abc import Sequence
 
-from tool_registry import get_all_tools
-from agent_builder import build_agent
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from agent_service import run_agent_single_turn, run_agent_with_history as run_history
 
-def run_agent(user_query):
-    agent = build_agent()
+logger = logging.getLogger(__name__)
 
-    state = {
-        "messages": [
-            HumanMessage(content=user_query)
-        ],
-        "plan": None,
-        "observation": None,
-    }
 
-    result = agent.invoke(state)
+def run_agent(user_query: str) -> str:
+    """Run the agent with a single user query."""
+    try:
+        return run_agent_single_turn(user_query)
+    except Exception as e:
+        logger.error(f"Agent invocation failed: {e}", exc_info=True)
+        return f"Error: Failed to process request. Details: {str(e)}"
 
-    last_ai = next(
-        (m for m in reversed(result["messages"]) if isinstance(m, AIMessage)),
-        None
-    )
 
-    return last_ai.content if last_ai else "Sorry, I couldn't find an answer."
+def run_chat_history(chat_history: Sequence[Sequence[str]]) -> str:
+    """Run the agent with conversation history."""
+    try:
+        return run_history(chat_history)
+    except Exception as e:
+        logger.error(f"Agent invocation failed: {e}", exc_info=True)
+        return f"Error: Failed to process request. Details: {str(e)}"
 
-if __name__ == "__main__":
+
+def main() -> None:
+    """Main CLI entry point."""
     if len(sys.argv) > 1:
         user_query = " ".join(sys.argv[1:])
     else:
         user_query = "Find the latest price of Tesla stock."
 
-    result = run_agent(user_query)
-    print(result)
+    print("\n=== Running Agent ===")
+    print(f"Query: {user_query}")
+    print(f"\nResponse:\n{run_agent(user_query)}\n")
 
+
+if __name__ == "__main__":
+    main()

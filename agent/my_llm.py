@@ -1,51 +1,42 @@
 import requests
 import asyncio
-from typing import List, Optional, Union
+from typing import List
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.outputs import ChatResult, ChatGeneration
 
-# ---------------------------
-# Request helper
-# ---------------------------
-def mychatllm_calling(messages: List[dict], max_tokens: int = 512) -> str:
-    """
-    Sends conversation messages to the FastAPI LLM server and returns text.
-    """
-    url = 'http://localhost:8000/chat'
+DEFAULT_LLM_ENDPOINT = "http://localhost:8000/chat"
 
-    # Convert API messages to the new "messages" field expected by app.py
+
+def call_llm_server(messages: List[dict], max_tokens: int = 512) -> str:
+    """Send conversation messages to the local LLM server."""
     payload = {
         "messages": messages,
-        "max_tokens": max_tokens
+        "max_tokens": max_tokens,
     }
 
     response = requests.post(
-        url,
+        DEFAULT_LLM_ENDPOINT,
         headers={
             "Content-Type": "application/json",
-            "USER_AGENT": "mlx-ai-agent/0.1 (local)"
+            "USER_AGENT": "mlx-ai-agent/0.1 (local)",
         },
-        json=payload
+        json=payload,
     )
 
     try:
         result = response.json()
-        # Our app.py returns:
-        # { "response": "...", "messages": [...] }
         return result.get("response", "")
     except Exception:
         return response.text
 
-# ---------------------------
-# MyChatLLM class
-# ---------------------------
+
 class MyChatLLM(BaseChatModel):
     """Minimal custom chat model for LangChain / LangGraph."""
 
     def _format_messages(self, messages: List) -> List[dict]:
         """
-        Convert LangChain messages → backend format for app.py:
+        Convert LangChain messages to the backend format:
         [{"type": "HumanMessage"/"AIMessage", "content": "..."}]
         """
         api_messages = []
@@ -61,22 +52,16 @@ class MyChatLLM(BaseChatModel):
 
             api_messages.append({
                 "type": msg_type,
-                "content": m.content
+                "content": m.content,
             })
         return api_messages
 
-    # ---------------------------
-    #  Synchronous generation
-    # ---------------------------
     def _generate(self, messages: List, stop=None):
         api_messages = self._format_messages(messages)
-        output_text = mychatllm_calling(api_messages)
+        output_text = call_llm_server(api_messages)
         ai_msg = AIMessage(content=output_text)
         return ChatResult(generations=[ChatGeneration(message=ai_msg)])
 
-    # ---------------------------
-    #  Async generation
-    # ---------------------------
     async def _agenerate(self, messages: List, stop=None):
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, lambda: self._generate(messages, stop))

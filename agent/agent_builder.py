@@ -1,20 +1,20 @@
 import datetime
 import json
+import logging
 import re
 
-from pydantic import BaseModel, Field
-from typing import Dict, Any, TypedDict, List, Optional
-from langgraph.graph import StateGraph, END
-from langchain_core.messages import HumanMessage, AIMessage
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.prompts import ChatPromptTemplate
+from langgraph.graph import END, StateGraph
+from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Optional, TypedDict
 
 from my_llm import MyChatLLM
 from tool_registry import get_all_tools
 
-# ---------------------------
-#  ReAct Prompt Template
-# ---------------------------
+logger = logging.getLogger(__name__)
+
 PLANNER_PROMPT = """You are a ReAct-style planning agent.
 
 Your job is to decide the NEXT action only.
@@ -63,84 +63,68 @@ Observation:
 {observation}
 """
 
-# ---------------------------
-#  Correct LangGraph State Schema
-# ---------------------------
+
 class AgentState(TypedDict):
     messages: List[HumanMessage | AIMessage]
     plan: Optional[dict]
     observation: Optional[str]
 
+
 class Plan(BaseModel):
     action: str = Field(
-        description="Tool name to call, or 'Final Answer'"
+        description="Tool name to call, or 'Final Answer'",
     )
     args: Dict[str, Any] = Field(
         default_factory=dict,
-        description="Arguments for the tool"
+        description="Arguments for the tool",
     )
     final_answer: str | None = Field(
         default=None,
-        description="Final answer to the user, if action is Final Answer"
+        description="Final answer to the user, if action is Final Answer",
     )
 
+
 def extract_first_json(text: str) -> dict:
-    """
-    Safely find the first JSON object inside text
-    and load it. Raises if no JSON found.
-    """
+    """Load the first JSON object found in model output."""
     match = re.search(r"\{[\s\S]*\}", text)
     if not match:
         raise ValueError(f"No JSON object found in LLM output:\n{text}")
 
     return json.loads(match.group())
 
+
+def first_user_question(messages: List[HumanMessage | AIMessage]) -> str:
+    """Return the first user message in the conversation."""
+    return next(message.content for message in messages if isinstance(message, HumanMessage))
+
+
+def parse_plan(raw_output: str, parser: JsonOutputParser) -> dict:
+    """Parse planner output, falling back to JSON extraction for noisy model responses."""
+    try:
+        return parser.parse(raw_output)
+    except Exception:
+        logger.warning("Falling back to first JSON object extraction for planner output.")
+        return extract_first_json(raw_output)
+
+
 def build_agent():
     llm = MyChatLLM()
     tools = get_all_tools()
     tool_map = {t.name: t for t in tools}
     tools_text = "\n".join(f"{t.name}: {t.description}" for t in tools)
-
     prompt = ChatPromptTemplate.from_template(PLANNER_PROMPT)
+    parser = JsonOutputParser(pydantic_object=Plan)
 
-    # -------------------------
-    # Planner Node
-    # -------------------------
     def planner(state: AgentState):
-        question = next(
-            m.content for m in state["messages"]
-            if isinstance(m, HumanMessage)
-        )
-
-        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
-
-        # Create the structured output parser
-        parser = JsonOutputParser(pydantic_object=Plan)
-
         msgs = prompt.format_messages(
             tools=tools_text,
-            question=question,
-            current_date=current_date,
+            question=first_user_question(state["messages"]),
+            current_date=datetime.datetime.now().strftime("%Y-%m-%d"),
             observation=state.get("observation"),
             format_instructions=parser.get_format_instructions(),
         )
-
         response = llm.invoke(msgs)
-        raw = response.content
-
-        plan: dict
-
-        try:
-            # First try structured parser (strict)
-            plan = parser.parse(raw)
-        except Exception:
-            # Fallback: extract first JSON object manually
-            print("⚠️ Fallback JSON extraction triggered")
-            plan = extract_first_json(raw)
-
-        # Ensure plan is a dict
-        # if not isinstance(plan, dict):
-        #     plan = plan.model_dump()  # For parsers returning Pydantic model
+        plan = parse_plan(response.content, parser)
 
         return {
             "messages": state["messages"] + [response],
@@ -148,22 +132,16 @@ def build_agent():
             "observation": None,
         }
 
-    # -------------------------
-    # Tool Executor Node
-    # -------------------------
     def tool_executor(state: AgentState):
         plan = state["plan"]
         action = plan["action"]
         args = plan.get("args", {})
 
-        print(f"=== [DEBUG] Executing tool: {action} args={args}")
+        logger.debug("Executing tool %s with args=%s", action, args)
 
         tool = tool_map[action]
         result = tool.invoke(args)
-
         obs = f"Tool {action} result:\n{result}"
-
-        # print(f"=== [DEBUG] Tool observation:\n{obs}")
 
         return {
             "messages": state["messages"] + [AIMessage(content=obs)],
@@ -171,9 +149,6 @@ def build_agent():
             "observation": obs,
         }
 
-    # -------------------------
-    # Router
-    # -------------------------
     def router(state: AgentState):
         action = state["plan"]["action"]
 
@@ -185,9 +160,6 @@ def build_agent():
 
         raise ValueError(f"Unknown action: {action}")
 
-    # -------------------------
-    # Graph
-    # -------------------------
     graph = StateGraph(AgentState)
     graph.add_node("planner", planner)
     graph.add_node("tool", tool_executor)
