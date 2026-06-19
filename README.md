@@ -3,6 +3,7 @@
 ## Create virtual environment with pyenv
 
 ```sh
+pyenv install --list
 pyenv virtualenv 3.12.12 mlx-agent-env
 source ~/.pyenv/versions/mlx-agent-env/bin/activate
 
